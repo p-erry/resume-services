@@ -72,6 +72,19 @@ export default function IntakePage() {
               required
             />
           </div>
+          
+<div>
+  <label className="block mb-1 text-gray-300" htmlFor="timeline">
+    Timeline
+  </label>
+  <input
+    id="timeline"
+    name="timeline"
+    className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-white"
+    type="text"
+    placeholder="Example: interviewing now, targeting Q2, ASAP, exploring"
+  />
+</div>
 
           <div>
             <label className="block mb-1 text-gray-300" htmlFor="notes">
@@ -86,6 +99,20 @@ export default function IntakePage() {
             />
           </div>
 
+<div>
+  <label className="block mb-1 text-gray-300" htmlFor="expectations">
+    Expected outcome (optional)
+  </label>
+  <textarea
+    id="expectations"
+    name="expectations"
+    className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-white"
+    rows={2}
+    placeholder="Better narrative, interview conversions, industry pivot, comp bump, executive polish, etc."
+  />
+</div>
+
+          
           {/* Honeypot anti-bot field (hidden from humans) */}
           <input type="text" name="_gotcha" className="hidden" />
 
