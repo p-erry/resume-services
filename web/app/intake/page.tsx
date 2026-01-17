@@ -68,23 +68,23 @@ export default function IntakePage() {
               name="roles"
               className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-white"
               rows={3}
-              placeholder="Example: Senior Program Manager roles in tech-enabled services, or similar."
+              placeholder="Example: Director PMO / Senior Program Manager in tech-enabled services."
               required
             />
           </div>
-          
-<div>
-  <label className="block mb-1 text-gray-300" htmlFor="timeline">
-    Timeline
-  </label>
-  <input
-    id="timeline"
-    name="timeline"
-    className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-white"
-    type="text"
-    placeholder="Example: interviewing now, targeting Q2, ASAP, exploring"
-  />
-</div>
+
+          <div>
+            <label className="block mb-1 text-gray-300" htmlFor="timeline">
+              Timeline (optional)
+            </label>
+            <input
+              id="timeline"
+              name="timeline"
+              className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-white"
+              type="text"
+              placeholder="Interviewing now, targeting Q2, ASAP, exploring, etc."
+            />
+          </div>
 
           <div>
             <label className="block mb-1 text-gray-300" htmlFor="notes">
@@ -95,41 +95,31 @@ export default function IntakePage() {
               name="notes"
               className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-white"
               rows={3}
-              placeholder="Timeline, specific job links, career pivots, challenges, etc."
+              placeholder="Specific job links, pivots, challenges, comp expectations, etc."
             />
           </div>
 
-<div>
-  <label className="block mb-1 text-gray-300" htmlFor="expectations">
-    Expected outcome (optional)
-  </label>
-  <textarea
-    id="expectations"
-    name="expectations"
-    className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-white"
-    rows={2}
-    placeholder="Better narrative, interview conversions, industry pivot, comp bump, executive polish, etc."
-  />
-</div>
-
-          
           {/* Honeypot anti-bot field (hidden from humans) */}
           <input type="text" name="_gotcha" className="hidden" />
 
-          {/* Optional redirect after success */}
-          <input type="hidden" name="_redirect" value="/" />
+          {/* Custom email subject */}
+          <input
+            type="hidden"
+            name="_subject"
+            value="New Resume Righting intake submission"
+          />
 
           <button
             type="submit"
-            className="mt-4 inline-flex items-center rounded-lg bg-white px-6 py-2 text-sm font-medium text-black hover:bg-gray-200 transition"
+            className="mt-4 inline-flex items-center rounded-lg bg白 px-6 py-2 text-sm font-medium text-black hover:bg-gray-200 transition"
           >
             Submit intake
           </button>
 
           <p className="text-xs text-gray-500 mt-2">
-            You&apos;ll receive a confirmation email once this form is
-            submitted. I&apos;ll review your details and follow up with next
-            steps and recommended tier.
+            You&apos;ll receive a confirmation from Formspree after submitting.
+            I&apos;ll review your details and follow up with next steps and a
+            recommended tier.
           </p>
         </form>
       </section>
