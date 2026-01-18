@@ -42,9 +42,7 @@ function cleanHighlights(items: string[]) {
 }
 
 function safeUrl(value: string) {
-  const v = value.trim();
-  if (!v) return "";
-  return v;
+  return value.trim();
 }
 
 export default function IntakePage() {
@@ -71,7 +69,6 @@ export default function IntakePage() {
 
   const [education, setEducation] = useState("");
   const [certifications, setCertifications] = useState("");
-
   const [skillsAndPlatforms, setSkillsAndPlatforms] = useState("");
   const [targetJobUrl, setTargetJobUrl] = useState("");
 
@@ -79,10 +76,14 @@ export default function IntakePage() {
   const [error, setError] = useState<string | null>(null);
   const [streamedText, setStreamedText] = useState("");
 
-  const debugPayload = useMemo<IntakePayload>(() => {
+  const debugEnabled =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "1";
+
+  const payload = useMemo<IntakePayload>(() => {
+    const linkedIn = safeUrl(linkedinUrl);
     return {
       name: name.trim(),
-      linkedinUrl: safeUrl(linkedinUrl) || undefined,
+      linkedinUrl: linkedIn ? linkedIn : undefined,
       location: {
         city: city.trim(),
         state: state.trim(),
@@ -197,14 +198,14 @@ export default function IntakePage() {
     e.preventDefault();
     setError(null);
     setStreamedText("");
-
     setLoading(true);
+
     try {
       const res = await fetch("/api/resume-agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [{ role: "user", content: JSON.stringify(debugPayload) }],
+          messages: [{ role: "user", content: JSON.stringify(payload) }],
         }),
       });
 
@@ -292,360 +293,3 @@ export default function IntakePage() {
                       onChange={(e) => setCity(e.target.value)}
                       placeholder="City"
                     />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-300 mb-1" htmlFor="state">
-                      State
-                    </label>
-                    <input
-                      id="state"
-                      className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
-                      value={state}
-                      onChange={(e) => setState(e.target.value)}
-                      placeholder="State"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-300 mb-1" htmlFor="zip">
-                      Zip
-                    </label>
-                    <input
-                      id="zip"
-                      className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
-                      value={zip}
-                      onChange={(e) => setZip(e.target.value)}
-                      placeholder="Zip"
-                      inputMode="numeric"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-gray-800 bg-gray-950 p-6 shadow">
-              <h2 className="text-xl font-semibold">Targeting</h2>
-              <p className="mt-1 text-sm text-gray-400">Aim one level up.</p>
-
-              <div className="mt-4 space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-300 mb-1" htmlFor="desiredTitle">
-                    Desired title
-                  </label>
-                  <input
-                    id="desiredTitle"
-                    className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
-                    value={desiredTitle}
-                    onChange={(e) => setDesiredTitle(e.target.value)}
-                    placeholder="Role title you want"
-                    required
-                  />
-                  <p className="mt-1 text-xs text-gray-500">Nudge, pick the role one rung above your current scope.</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-300 mb-1" htmlFor="salary">
-                    Desired salary range
-                  </label>
-                  <input
-                    id="salary"
-                    className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
-                    value={desiredSalaryRange}
-                    onChange={(e) => setDesiredSalaryRange(e.target.value)}
-                    placeholder="Optional"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">Optional but recommended, it calibrates positioning.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-gray-800 bg-gray-950 p-6 shadow">
-              <h2 className="text-xl font-semibold">Recent work</h2>
-              <p className="mt-1 text-sm text-gray-400">The last role is the trailer. Make it watchable.</p>
-
-              <div className="mt-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm text-gray-300 mb-1" htmlFor="currentTitle">
-                      Current or last role title
-                    </label>
-                    <input
-                      id="currentTitle"
-                      className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
-                      value={currentTitle}
-                      onChange={(e) => setCurrentTitle(e.target.value)}
-                      placeholder="Role title"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-300 mb-1" htmlFor="currentCompany">
-                      Company
-                    </label>
-                    <input
-                      id="currentCompany"
-                      className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
-                      value={currentCompany}
-                      onChange={(e) => setCurrentCompany(e.target.value)}
-                      placeholder="Company"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-                  <div>
-                    <label className="block text-sm text-gray-300 mb-1" htmlFor="currentStart">
-                      Start date
-                    </label>
-                    <input
-                      id="currentStart"
-                      className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
-                      value={currentStartDate}
-                      onChange={(e) => setCurrentStartDate(e.target.value)}
-                      placeholder="YYYY-MM"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-300 mb-1" htmlFor="currentEnd">
-                      End date
-                    </label>
-                    <input
-                      id="currentEnd"
-                      className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white disabled:opacity-50"
-                      value={currentEndDate}
-                      onChange={(e) => setCurrentEndDate(e.target.value)}
-                      placeholder="YYYY-MM"
-                      disabled={currentIsCurrent}
-                    />
-                    <p className="mt-1 text-xs text-gray-500">Disabled while still employed is on.</p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      id="isCurrent"
-                      type="checkbox"
-                      className="h-4 w-4"
-                      checked={currentIsCurrent}
-                      onChange={(e) => setCurrentIsCurrent(e.target.checked)}
-                    />
-                    <label htmlFor="isCurrent" className="text-sm text-gray-300">
-                      Still employed
-                    </label>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between gap-3">
-                    <label className="block text-sm text-gray-300 mb-1">Impact highlights</label>
-                    <button
-                      type="button"
-                      onClick={addCurrentHighlight}
-                      className="text-xs rounded-md border border-gray-700 px-2 py-1 hover:bg-gray-900"
-                    >
-                      Add highlight
-                    </button>
-                  </div>
-
-                  <div className="space-y-2">
-                    {currentHighlights.map((h, idx) => (
-                      <div key={idx} className="flex gap-2">
-                        <input
-                          className="flex-1 rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
-                          value={h}
-                          onChange={(e) => updateCurrentHighlight(idx, e.target.value)}
-                          placeholder="Outcome first, then how."
-                        />
-                        {currentHighlights.length > 2 ? (
-                          <button
-                            type="button"
-                            onClick={() => removeCurrentHighlight(idx)}
-                            className="rounded-md border border-gray-700 px-3 py-2 text-xs hover:bg-gray-900"
-                          >
-                            Remove
-                          </button>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <label className="block text-sm text-gray-300 mb-1">Prior roles</label>
-                      <p className="text-xs text-gray-500">Two to four roles from the last five to ten years.</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={addPriorRole}
-                      className="text-xs rounded-md border border-gray-700 px-2 py-1 hover:bg-gray-900"
-                    >
-                      Add role
-                    </button>
-                  </div>
-
-                  <div className="mt-3 space-y-4">
-                    {priorRoles.map((role, idx) => (
-                      <div key={idx} className="rounded-xl border border-gray-800 bg-black p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h3 className="font-semibold">Role {idx + 1}</h3>
-                            <p className="text-xs text-gray-500">Two impact bullets minimum.</p>
-                          </div>
-                          {priorRoles.length > 1 ? (
-                            <button
-                              type="button"
-                              onClick={() => removePriorRole(idx)}
-                              className="text-xs rounded-md border border-gray-700 px-2 py-1 hover:bg-gray-900"
-                            >
-                              Remove role
-                            </button>
-                          ) : null}
-                        </div>
-
-                        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-sm text-gray-300 mb-1">Title</label>
-                            <input
-                              className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
-                              value={role.title}
-                              onChange={(e) => updatePriorRoleField(idx, "title", e.target.value)}
-                              placeholder="Role title"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm text-gray-300 mb-1">Company</label>
-                            <input
-                              className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
-                              value={role.company}
-                              onChange={(e) => updatePriorRoleField(idx, "company", e.target.value)}
-                              placeholder="Company"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-sm text-gray-300 mb-1">Start date</label>
-                            <input
-                              className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
-                              value={role.startDate}
-                              onChange={(e) => updatePriorRoleField(idx, "startDate", e.target.value)}
-                              placeholder="YYYY-MM"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm text-gray-300 mb-1">End date</label>
-                            <input
-                              className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
-                              value={role.endDate}
-                              onChange={(e) => updatePriorRoleField(idx, "endDate", e.target.value)}
-                              placeholder="YYYY-MM"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="mt-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <label className="block text-sm text-gray-300 mb-1">Impact highlights</label>
-                            <button
-                              type="button"
-                              onClick={() => addPriorRoleHighlight(idx)}
-                              className="text-xs rounded-md border border-gray-700 px-2 py-1 hover:bg-gray-900"
-                            >
-                              Add highlight
-                            </button>
-                          </div>
-
-                          <div className="space-y-2">
-                            {role.highlights.map((h, hIdx) => (
-                              <div key={hIdx} className="flex gap-2">
-                                <input
-                                  className="flex-1 rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
-                                  value={h}
-                                  onChange={(e) => updatePriorRoleHighlight(idx, hIdx, e.target.value)}
-                                  placeholder="Measurable outcome, scope, stakeholders."
-                                />
-                                {role.highlights.length > 2 ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => removePriorRoleHighlight(idx, hIdx)}
-                                    className="rounded-md border border-gray-700 px-3 py-2 text-xs hover:bg-gray-900"
-                                  >
-                                    Remove
-                                  </button>
-                                ) : null}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-gray-800 bg-gray-950 p-6 shadow">
-              <h2 className="text-xl font-semibold">Credibility</h2>
-              <p className="mt-1 text-sm text-gray-400">Enough to trust you, not enough to bore them.</p>
-
-              <div className="mt-4 space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-300 mb-1">Education</label>
-                  <textarea
-                    className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
-                    rows={3}
-                    value={education}
-                    onChange={(e) => setEducation(e.target.value)}
-                    placeholder="School, degree, year, optional notes."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-300 mb-1">Certifications</label>
-                  <textarea
-                    className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
-                    rows={2}
-                    value={certifications}
-                    onChange={(e) => setCertifications(e.target.value)}
-                    placeholder="PMP, SAFe, Prosci, etc."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-300 mb-1">Skills and platforms</label>
-                  <textarea
-                    className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
-                    rows={3}
-                    value={skillsAndPlatforms}
-                    onChange={(e) => setSkillsAndPlatforms(e.target.value)}
-                    placeholder="Tools, platforms, domains, systems."
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-gray-800 bg-gray-950 p-6 shadow">
-              <h2 className="text-xl font-semibold">Optional LTV</h2>
-              <p className="mt-1 text-sm text-gray-400">If you have a target job, we can tune the story to it.</p>
-
-              <div className="mt-4">
-                <label className="block text-sm text-gray-300 mb-1">Target job URL</label>
-                <input
-                  className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
-                  value={targetJobUrl}
-                  onChange={(e) => setTargetJobUrl(e.target.value)}
-                  placeholder="https://company.com/jobs/..."
-                  inputMode="url"
-                  autoComplete="url"
-                />
-              </div>
-            </div>
