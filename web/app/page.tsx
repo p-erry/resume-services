@@ -1,32 +1,41 @@
-export default function Page() {
+import Link from "next/link";
+
+export default function Home() {
   return (
-    <section className="max-w-2xl mx-auto text-center pt-20">
-      <h1 className="text-4xl md:text-5xl font-bold mb-4">
-        Resume Righting
-      </h1>
+    <main className="flex min-h-screen flex-col items-center justify-center px-4 py-16 bg-black text-white">
+      <section className="max-w-2xl w-full text-center">
+        <h1 className="text-4xl md:text-5xl font-bold mb-4">Resume Righting</h1>
 
-      <p className="text-lg text-gray-300 mb-2">
-        Right writing for the right roles.
-      </p>
+        <p className="text-lg text-gray-300 mb-4">
+          Your resume is not a history document, it is a product.
+        </p>
 
-      <p className="text-sm md:text-base text-gray-400 mb-6">
-        From-scratch resume writing for the roles you want.
-      </p>
+        <p className="text-sm md:text-base text-gray-400 mb-10">
+          I do not fix old resumes, I replace them. We start with your story, your impact, and the
+          roles you are targeting, then build a new resume from the ground up that reads like a
+          product, not a timeline.
+        </p>
 
-      <p className="text-sm md:text-base text-gray-400 mb-8">
-        Your resume isn&apos;t a history document. It&apos;s a product. I don&apos;t fix old resumes, I replace them. We extract your story, identify your value, and build a resume designed to get interviews, not just pass filters.
-      </p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Link
+            href="/intake"
+            className="inline-flex items-center justify-center rounded-lg bg-white px-6 py-3 text-sm font-medium text-black hover:bg-gray-200 transition w-full sm:w-auto"
+          >
+            Start intake
+          </Link>
 
-      <a
-        href="/intake"
-        className="inline-flex items-center rounded-lg bg-white px-6 py-3 text-sm font-medium text-black hover:bg-gray-200 transition"
-      >
-        Start intake
-      </a>
+          <Link
+            href="/resume"
+            className="inline-flex items-center justify-center rounded-lg border border-gray-700 bg-gray-950 px-6 py-3 text-sm font-medium text-white hover:bg-gray-900 transition w-full sm:w-auto"
+          >
+            Internal test harness
+          </Link>
+        </div>
 
-      <p className="mt-6 text-xs text-gray-500">
-        Operated as a focused, human-led resume service, deployed on Vercel.
-      </p>
-    </section>
+        <p className="mt-8 text-xs text-gray-500">
+          The intake generates a first draft, then we iterate into a final version.
+        </p>
+      </section>
+    </main>
   );
 }
