@@ -109,7 +109,11 @@ function compactIntakeSummary(intake: IntakePayload): string {
   lines.push("Current role:");
   lines.push(`- Title: ${intake.currentRole.title || "Unknown"}`);
   lines.push(`- Company: ${intake.currentRole.company || "Unknown"}`);
-  lines.push(`- Dates: ${intake.currentRole.startDate || "?"} to ${intake.currentRole.isCurrent ? "Present" : intake.currentRole.endDate || "?"}`);
+  lines.push(
+    `- Dates: ${intake.currentRole.startDate || "?"} to ${
+      intake.currentRole.isCurrent ? "Present" : intake.currentRole.endDate || "?"
+    }`
+  );
   lines.push("- Highlights:");
   if (intake.currentRole.highlights.length) {
     for (const h of intake.currentRole.highlights) lines.push(`  - ${h}`);
@@ -121,7 +125,9 @@ function compactIntakeSummary(intake: IntakePayload): string {
     lines.push("");
     lines.push("Prior roles:");
     intake.priorRoles.slice(0, 6).forEach((r, idx) => {
-      lines.push(`${idx + 1}. ${r.title || "Unknown"} at ${r.company || "Unknown"} (${r.startDate || "?"} to ${r.endDate || "?"})`);
+      lines.push(
+        `${idx + 1}. ${r.title || "Unknown"} at ${r.company || "Unknown"} (${r.startDate || "?"} to ${r.endDate || "?"})`
+      );
       const hs = (r.highlights || []).filter(Boolean);
       if (hs.length) hs.slice(0, 4).forEach((h) => lines.push(`   - ${h}`));
       else lines.push("   - Highlights not provided");
@@ -187,14 +193,13 @@ export async function POST(req: Request) {
       ? [
           {
             role: "user" as const,
-            content:
-              [
-                "INTAKE (structured, authoritative):",
-                compactIntakeSummary(intake),
-                "",
-                `Draft allowed: ${draftAllowed ? "Yes" : "No"}`,
-                "If Draft allowed is No, do not draft, ask only the minimum questions.",
-              ].join("\n"),
+            content: [
+              "INTAKE (structured, authoritative):",
+              compactIntakeSummary(intake),
+              "",
+              `Draft allowed: ${draftAllowed ? "Yes" : "No"}`,
+              "If Draft allowed is No, do not draft, ask only the minimum questions.",
+            ].join("\n"),
           },
         ]
       : [];
@@ -205,5 +210,5 @@ export async function POST(req: Request) {
     messages: [...messages, ...injected],
   });
 
-  return result.toDataStreamResponse();
+  return result.toTextStreamResponse();
 }
