@@ -16,19 +16,12 @@ export default function Home() {
           product, not a timeline.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <div className="flex items-center justify-center">
           <Link
             href="/intake"
-            className="inline-flex items-center justify-center rounded-lg bg-white px-6 py-3 text-sm font-medium text-black hover:bg-gray-200 transition w-full sm:w-auto"
+            className="inline-flex items-center justify-center rounded-lg bg-white px-6 py-3 text-sm font-medium text-black hover:bg-gray-200 transition"
           >
             Start intake
-          </Link>
-
-          <Link
-            href="/resume"
-            className="inline-flex items-center justify-center rounded-lg border border-gray-700 bg-gray-950 px-6 py-3 text-sm font-medium text-white hover:bg-gray-900 transition w-full sm:w-auto"
-          >
-            Internal test harness
           </Link>
         </div>
 
