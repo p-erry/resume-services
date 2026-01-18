@@ -95,20 +95,20 @@ function hasDraftEssentials(intake: IntakePayload): boolean {
   return hasRoleTitle && hasHighlights && hasSkills;
 }
 
-function compactIntakeSummary(intake: IntakePayload): string {
+function compactIntake(intake: IntakePayload): string {
   const lines: string[] = [];
+
+  lines.push(`Desired title: ${intake.desiredTitle || "Unknown"}`);
+  if (intake.desiredSalaryRange) lines.push(`Desired salary range: ${intake.desiredSalaryRange}`);
 
   lines.push(`Name: ${intake.name || "Unknown"}`);
   lines.push(
     `Location: ${[intake.location.city, intake.location.state, intake.location.zip].filter(Boolean).join(", ") || "Unknown"}`
   );
-  lines.push(`Desired title: ${intake.desiredTitle || "Unknown"}`);
-  if (intake.desiredSalaryRange) lines.push(`Desired salary range: ${intake.desiredSalaryRange}`);
 
   lines.push("");
   lines.push("Current role:");
-  lines.push(`- Title: ${intake.currentRole.title || "Unknown"}`);
-  lines.push(`- Company: ${intake.currentRole.company || "Unknown"}`);
+  lines.push(`- ${intake.currentRole.title || "Unknown"} at ${intake.currentRole.company || "Unknown"}`);
   lines.push(
     `- Dates: ${intake.currentRole.startDate || "?"} to ${
       intake.currentRole.isCurrent ? "Present" : intake.currentRole.endDate || "?"
@@ -125,9 +125,7 @@ function compactIntakeSummary(intake: IntakePayload): string {
     lines.push("");
     lines.push("Prior roles:");
     intake.priorRoles.slice(0, 6).forEach((r, idx) => {
-      lines.push(
-        `${idx + 1}. ${r.title || "Unknown"} at ${r.company || "Unknown"} (${r.startDate || "?"} to ${r.endDate || "?"})`
-      );
+      lines.push(`${idx + 1}. ${r.title || "Unknown"} at ${r.company || "Unknown"} (${r.startDate || "?"} to ${r.endDate || "?"})`);
       const hs = (r.highlights || []).filter(Boolean);
       if (hs.length) hs.slice(0, 4).forEach((h) => lines.push(`   - ${h}`));
       else lines.push("   - Highlights not provided");
@@ -167,42 +165,52 @@ export async function POST(req: Request) {
   const lastUser = [...messages].reverse().find((m) => m?.role === "user" && typeof m?.content === "string");
   const maybeJson = lastUser?.content ? safeJsonParse(lastUser.content) : null;
 
-  let intake: IntakePayload | null = null;
-  if (looksLikeIntake(maybeJson)) intake = normalizeIntake(maybeJson);
-
+  const intake = looksLikeIntake(maybeJson) ? normalizeIntake(maybeJson) : null;
   const draftAllowed = intake ? hasDraftEssentials(intake) : false;
 
   const system = [
-    "You are Resume Righting.",
-    "No greetings, no generic chat behavior, no offers to help.",
-    "Output in this exact order with markdown headings:",
+    "You are Resume Righting, a senior resume operator.",
+    "Tone: decisive, high signal, recruiter-readable. No greetings. No filler. No motivational language.",
+    "Do not ask more than five questions.",
+    "Use markdown headings exactly as specified.",
+    "",
+    "Output contract:",
     "## What I understood",
-    "Bullets only, short and specific.",
+    "Bullets only, short, specific.",
     "## Gaps",
     "Max 5 bullets, only gaps that block strong drafting.",
     "## Follow up questions",
     "Max 5 questions, only the minimum needed to draft strong bullets.",
-    "Only include ## Draft if drafting is allowed.",
-    "If drafting is allowed, include in this order: Summary, Core competencies, Current role bullets (4 to 6), Prior role bullets (2 to 4 each).",
-    "Bullets must lead with outcomes, scale, scope, then how.",
-    "Avoid fluff.",
-  ].join(" ");
+    "",
+    "Draft gating:",
+    "Only include ## Draft if Draft allowed is Yes.",
+    "If Draft allowed is No, do not draft, and include a final line: 'Draft not generated, awaiting answers.'",
+    "",
+    "Draft format when allowed:",
+    "## Draft",
+    "### Summary",
+    "### Core competencies",
+    "### Current role",
+    "4 to 6 bullets, outcome first, then scale, then how.",
+    "### Prior roles",
+    "2 to 4 bullets per role, outcome first.",
+    "Avoid buzzwords and vague claims.",
+  ].join("\n");
 
-  const injected =
-    intake
-      ? [
-          {
-            role: "user" as const,
-            content: [
-              "INTAKE (structured, authoritative):",
-              compactIntakeSummary(intake),
-              "",
-              `Draft allowed: ${draftAllowed ? "Yes" : "No"}`,
-              "If Draft allowed is No, do not draft, ask only the minimum questions.",
-            ].join("\n"),
-          },
-        ]
-      : [];
+  const injected = intake
+    ? [
+        {
+          role: "user" as const,
+          content: [
+            "INTAKE (authoritative):",
+            compactIntake(intake),
+            "",
+            `Draft allowed: ${draftAllowed ? "Yes" : "No"}`,
+            "If Draft allowed is No, ask only the minimum questions needed to draft.",
+          ].join("\n"),
+        },
+      ]
+    : [];
 
   const result = await streamText({
     model: openai("gpt-4.1-mini"),
