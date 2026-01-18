@@ -2,16 +2,9 @@
 
 import { useMemo, useState } from "react";
 
-type Role = {
-  title: string;
-  company: string;
-  startDate: string;
-  endDate: string;
-  highlights: string[];
-};
-
 type IntakePayload = {
   name: string;
+  linkedinUrl?: string;
   location: { city: string; state: string; zip: string };
   desiredTitle: string;
   desiredSalaryRange: string;
@@ -36,26 +29,30 @@ type IntakePayload = {
   targetJobUrl: string;
 };
 
-const emptyRole = (): Role => ({
-  title: "",
-  company: "",
-  startDate: "",
-  endDate: "",
-  highlights: ["", ""],
-});
+type RoleForm = {
+  title: string;
+  company: string;
+  startDate: string;
+  endDate: string;
+  highlights: string[];
+};
 
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
+function cleanHighlights(items: string[]) {
+  return items.map((s) => s.trim()).filter(Boolean);
+}
+
+function safeUrl(value: string) {
+  const v = value.trim();
+  if (!v) return "";
+  return v;
 }
 
 export default function IntakePage() {
-  const [loading, setLoading] = useState(false);
-  const [streamedText, setStreamedText] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
   const [name, setName] = useState("");
+  const [linkedinUrl, setLinkedinUrl] = useState("");
+
   const [city, setCity] = useState("");
-  const [stateValue, setStateValue] = useState("");
+  const [state, setState] = useState("");
   const [zip, setZip] = useState("");
 
   const [desiredTitle, setDesiredTitle] = useState("");
@@ -65,48 +62,59 @@ export default function IntakePage() {
   const [currentCompany, setCurrentCompany] = useState("");
   const [currentStartDate, setCurrentStartDate] = useState("");
   const [currentEndDate, setCurrentEndDate] = useState("");
-  const [isCurrent, setIsCurrent] = useState(true);
+  const [currentIsCurrent, setCurrentIsCurrent] = useState(true);
   const [currentHighlights, setCurrentHighlights] = useState<string[]>(["", ""]);
 
-  const [priorRoles, setPriorRoles] = useState<Role[]>([emptyRole(), emptyRole()]);
+  const [priorRoles, setPriorRoles] = useState<RoleForm[]>([
+    { title: "", company: "", startDate: "", endDate: "", highlights: ["", ""] },
+  ]);
 
   const [education, setEducation] = useState("");
   const [certifications, setCertifications] = useState("");
+
   const [skillsAndPlatforms, setSkillsAndPlatforms] = useState("");
   const [targetJobUrl, setTargetJobUrl] = useState("");
 
-  const payload: IntakePayload = useMemo(() => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [streamedText, setStreamedText] = useState("");
+
+  const debugPayload = useMemo<IntakePayload>(() => {
     return {
       name: name.trim(),
-      location: { city: city.trim(), state: stateValue.trim(), zip: zip.trim() },
+      linkedinUrl: safeUrl(linkedinUrl) || undefined,
+      location: {
+        city: city.trim(),
+        state: state.trim(),
+        zip: zip.trim(),
+      },
       desiredTitle: desiredTitle.trim(),
       desiredSalaryRange: desiredSalaryRange.trim(),
       currentRole: {
         title: currentTitle.trim(),
         company: currentCompany.trim(),
         startDate: currentStartDate.trim(),
-        endDate: isCurrent ? "" : currentEndDate.trim(),
-        isCurrent,
-        highlights: currentHighlights.map((h) => h.trim()).filter(Boolean),
+        endDate: currentIsCurrent ? "" : currentEndDate.trim(),
+        isCurrent: currentIsCurrent,
+        highlights: cleanHighlights(currentHighlights),
       },
-      priorRoles: priorRoles
-        .map((r) => ({
-          title: r.title.trim(),
-          company: r.company.trim(),
-          startDate: r.startDate.trim(),
-          endDate: r.endDate.trim(),
-          highlights: r.highlights.map((h) => h.trim()).filter(Boolean),
-        }))
-        .filter((r) => r.title || r.company || r.startDate || r.endDate || r.highlights.length > 0),
+      priorRoles: priorRoles.map((r) => ({
+        title: r.title.trim(),
+        company: r.company.trim(),
+        startDate: r.startDate.trim(),
+        endDate: r.endDate.trim(),
+        highlights: cleanHighlights(r.highlights),
+      })),
       education: education.trim(),
       certifications: certifications.trim(),
       skillsAndPlatforms: skillsAndPlatforms.trim(),
-      targetJobUrl: targetJobUrl.trim(),
+      targetJobUrl: safeUrl(targetJobUrl),
     };
   }, [
     name,
+    linkedinUrl,
     city,
-    stateValue,
+    state,
     zip,
     desiredTitle,
     desiredSalaryRange,
@@ -114,7 +122,7 @@ export default function IntakePage() {
     currentCompany,
     currentStartDate,
     currentEndDate,
-    isCurrent,
+    currentIsCurrent,
     currentHighlights,
     priorRoles,
     education,
@@ -123,43 +131,69 @@ export default function IntakePage() {
     targetJobUrl,
   ]);
 
-  const updateRole = (idx: number, patch: Partial<Role>) => {
-    setPriorRoles((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], ...patch };
-      return next;
-    });
-  };
+  const canSubmit = useMemo(() => {
+    const hasName = name.trim().length > 0;
+    const hasDesiredTitle = desiredTitle.trim().length > 0;
+    const hasCurrentTitle = currentTitle.trim().length > 0;
+    const hasCurrentCompany = currentCompany.trim().length > 0;
+    const hasTwoHighlights = cleanHighlights(currentHighlights).length >= 2;
+    const hasSkills = skillsAndPlatforms.trim().length > 0;
+    return hasName && hasDesiredTitle && hasCurrentTitle && hasCurrentCompany && hasTwoHighlights && hasSkills;
+  }, [name, desiredTitle, currentTitle, currentCompany, currentHighlights, skillsAndPlatforms]);
 
-  const updateRoleHighlight = (idx: number, hIdx: number, value: string) => {
-    setPriorRoles((prev) => {
-      const next = [...prev];
-      const role = next[idx];
-      const highlights = [...role.highlights];
-      highlights[hIdx] = value;
-      next[idx] = { ...role, highlights };
-      return next;
-    });
-  };
+  function updateCurrentHighlight(index: number, value: string) {
+    setCurrentHighlights((prev) => prev.map((h, i) => (i === index ? value : h)));
+  }
 
-  const addPriorRole = () => setPriorRoles((prev) => [...prev, emptyRole()]);
+  function addCurrentHighlight() {
+    setCurrentHighlights((prev) => [...prev, ""]);
+  }
 
-  const removePriorRole = (idx: number) =>
-    setPriorRoles((prev) => prev.filter((_, i) => i !== idx));
+  function removeCurrentHighlight(index: number) {
+    setCurrentHighlights((prev) => prev.filter((_, i) => i !== index));
+  }
 
-  const addCurrentHighlight = () => setCurrentHighlights((prev) => [...prev, ""]);
+  function addPriorRole() {
+    setPriorRoles((prev) => [...prev, { title: "", company: "", startDate: "", endDate: "", highlights: ["", ""] }]);
+  }
 
-  const updateCurrentHighlight = (idx: number, value: string) =>
-    setCurrentHighlights((prev) => {
-      const next = [...prev];
-      next[idx] = value;
-      return next;
-    });
+  function removePriorRole(index: number) {
+    setPriorRoles((prev) => prev.filter((_, i) => i !== index));
+  }
 
-  const removeCurrentHighlight = (idx: number) =>
-    setCurrentHighlights((prev) => prev.filter((_, i) => i !== idx));
+  function updatePriorRoleField(index: number, field: keyof Omit<RoleForm, "highlights">, value: string) {
+    setPriorRoles((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
+  }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function updatePriorRoleHighlight(roleIndex: number, highlightIndex: number, value: string) {
+    setPriorRoles((prev) =>
+      prev.map((r, i) => {
+        if (i !== roleIndex) return r;
+        const next = r.highlights.map((h, j) => (j === highlightIndex ? value : h));
+        return { ...r, highlights: next };
+      })
+    );
+  }
+
+  function addPriorRoleHighlight(roleIndex: number) {
+    setPriorRoles((prev) =>
+      prev.map((r, i) => {
+        if (i !== roleIndex) return r;
+        return { ...r, highlights: [...r.highlights, ""] };
+      })
+    );
+  }
+
+  function removePriorRoleHighlight(roleIndex: number, highlightIndex: number) {
+    setPriorRoles((prev) =>
+      prev.map((r, i) => {
+        if (i !== roleIndex) return r;
+        return { ...r, highlights: r.highlights.filter((_, j) => j !== highlightIndex) };
+      })
+    );
+  }
+
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setStreamedText("");
@@ -170,7 +204,7 @@ export default function IntakePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [{ role: "user", content: JSON.stringify(payload) }],
+          messages: [{ role: "user", content: JSON.stringify(debugPayload) }],
         }),
       });
 
@@ -178,7 +212,8 @@ export default function IntakePage() {
         const text = await res.text().catch(() => "");
         throw new Error(text || `Request failed with status ${res.status}`);
       }
-      if (!res.body) throw new Error("No response body returned");
+
+      if (!res.body) throw new Error("No response body");
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -190,391 +225,427 @@ export default function IntakePage() {
         const chunk = decoder.decode(value || new Uint8Array(), { stream: !done });
         if (chunk) setStreamedText((prev) => prev + chunk);
       }
-    } catch (err: any) {
-      setError(err?.message || "Something went wrong");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      setError(message);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="min-h-screen bg-black text-white">
-      <div className="mx-auto max-w-6xl px-4 py-12">
-        <header className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-            Resume Righting Intake
-          </h1>
+    <main className="min-h-screen bg-black text-white px-4 py-12">
+      <section className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold">Resume Righting Intake</h1>
           <p className="mt-2 text-sm md:text-base text-gray-300">
             Minimal fields, high signal. You are building a product, not listing a history.
           </p>
-        </header>
+        </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-          <form onSubmit={handleSubmit} className="space-y-8">
-            <Section title="Identity" subtitle="Who you are, where you are.">
-              <Row>
-                <Field label="Name">
-                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="First Last" />
-                </Field>
-              </Row>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          <form onSubmit={onSubmit} className="space-y-6">
+            <div className="rounded-2xl border border-gray-800 bg-gray-950 p-6 shadow">
+              <h2 className="text-xl font-semibold">Identity</h2>
+              <p className="mt-1 text-sm text-gray-400">Who you are, where you are.</p>
 
-              <Row3>
-                <Field label="City">
-                  <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Atlanta" />
-                </Field>
-                <Field label="State">
-                  <Input value={stateValue} onChange={(e) => setStateValue(e.target.value)} placeholder="GA" />
-                </Field>
-                <Field label="Zip">
-                  <Input value={zip} onChange={(e) => setZip(e.target.value)} placeholder="30301" />
-                </Field>
-              </Row3>
-            </Section>
-
-            <Section
-              title="Targeting"
-              subtitle="Aim one level up. If it feels slightly spicy, it is probably right."
-            >
-              <Row>
-                <Field label="Desired title" hint="Nudge: pick the role one rung above your current scope.">
-                  <Input
-                    value={desiredTitle}
-                    onChange={(e) => setDesiredTitle(e.target.value)}
-                    placeholder="Senior Program Manager"
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1" htmlFor="name">
+                    Name
+                  </label>
+                  <input
+                    id="name"
+                    className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Full name"
+                    required
                   />
-                </Field>
-              </Row>
-
-              <Row>
-                <Field label="Desired salary range" hint="Optional but recommended, it calibrates positioning.">
-                  <Input
-                    value={desiredSalaryRange}
-                    onChange={(e) => setDesiredSalaryRange(e.target.value)}
-                    placeholder="160 to 190"
-                  />
-                </Field>
-              </Row>
-            </Section>
-
-            <Section title="Recent work" subtitle="The last role is the trailer. Make it watchable.">
-              <Row>
-                <Field label="Current or last role title">
-                  <Input value={currentTitle} onChange={(e) => setCurrentTitle(e.target.value)} placeholder="IT Program Manager" />
-                </Field>
-              </Row>
-
-              <Row>
-                <Field label="Company">
-                  <Input value={currentCompany} onChange={(e) => setCurrentCompany(e.target.value)} placeholder="Company name" />
-                </Field>
-              </Row>
-
-              <Row3>
-                <Field label="Start date">
-                  <Input value={currentStartDate} onChange={(e) => setCurrentStartDate(e.target.value)} placeholder="2022-06" />
-                </Field>
-
-                <Field label="End date" hint={isCurrent ? "Disabled while Still employed is on." : ""}>
-                  <Input
-                    value={currentEndDate}
-                    onChange={(e) => setCurrentEndDate(e.target.value)}
-                    placeholder="2026-01"
-                    disabled={isCurrent}
-                  />
-                </Field>
-
-                <Field label="Still employed">
-                  <Toggle checked={isCurrent} onChange={setIsCurrent} />
-                </Field>
-              </Row3>
-
-              <div className="mt-4">
-                <div className="flex items-center justify-between">
-                  <Label>Impact highlights</Label>
-                  <button
-                    type="button"
-                    onClick={addCurrentHighlight}
-                    className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-1 text-xs hover:bg-gray-800"
-                  >
-                    Add highlight
-                  </button>
                 </div>
 
-                <div className="mt-3 space-y-3">
-                  {currentHighlights.map((h, idx) => (
-                    <div key={idx} className="flex gap-2">
-                      <Textarea
-                        value={h}
-                        onChange={(e) => updateCurrentHighlight(idx, e.target.value)}
-                        placeholder={`Highlight ${idx + 1}, outcome first, then how.`}
-                      />
-                      {currentHighlights.length > 2 ? (
-                        <button
-                          type="button"
-                          onClick={() => removeCurrentHighlight(idx)}
-                          className="h-10 shrink-0 rounded-lg border border-gray-700 bg-gray-900 px-3 text-xs hover:bg-gray-800"
-                        >
-                          Remove
-                        </button>
-                      ) : null}
-                    </div>
-                  ))}
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1" htmlFor="linkedin">
+                    LinkedIn URL
+                  </label>
+                  <input
+                    id="linkedin"
+                    className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
+                    value={linkedinUrl}
+                    onChange={(e) => setLinkedinUrl(e.target.value)}
+                    placeholder="https://linkedin.com/in/your-handle"
+                    inputMode="url"
+                    autoComplete="url"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Optional, paste the full profile link.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-sm text-gray-300 mb-1" htmlFor="city">
+                      City
+                    </label>
+                    <input
+                      id="city"
+                      className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="City"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-300 mb-1" htmlFor="state">
+                      State
+                    </label>
+                    <input
+                      id="state"
+                      className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
+                      value={state}
+                      onChange={(e) => setState(e.target.value)}
+                      placeholder="State"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-300 mb-1" htmlFor="zip">
+                      Zip
+                    </label>
+                    <input
+                      id="zip"
+                      className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
+                      value={zip}
+                      onChange={(e) => setZip(e.target.value)}
+                      placeholder="Zip"
+                      inputMode="numeric"
+                    />
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <div className="mt-8">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold">Prior roles</h3>
-                    <p className="text-xs text-gray-400">2 to 4 roles from the last 5 to 10 years.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={addPriorRole}
-                    className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-1 text-xs hover:bg-gray-800"
-                  >
-                    Add role
-                  </button>
+            <div className="rounded-2xl border border-gray-800 bg-gray-950 p-6 shadow">
+              <h2 className="text-xl font-semibold">Targeting</h2>
+              <p className="mt-1 text-sm text-gray-400">Aim one level up.</p>
+
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1" htmlFor="desiredTitle">
+                    Desired title
+                  </label>
+                  <input
+                    id="desiredTitle"
+                    className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
+                    value={desiredTitle}
+                    onChange={(e) => setDesiredTitle(e.target.value)}
+                    placeholder="Role title you want"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Nudge, pick the role one rung above your current scope.</p>
                 </div>
 
-                <div className="mt-4 space-y-6">
-                  {priorRoles.map((role, idx) => (
-                    <div key={idx} className="rounded-xl border border-gray-800 bg-gray-950 p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className="text-sm font-semibold">Role {idx + 1}</div>
-                          <div className="text-xs text-gray-400">Two impact bullets minimum.</div>
-                        </div>
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1" htmlFor="salary">
+                    Desired salary range
+                  </label>
+                  <input
+                    id="salary"
+                    className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
+                    value={desiredSalaryRange}
+                    onChange={(e) => setDesiredSalaryRange(e.target.value)}
+                    placeholder="Optional"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Optional but recommended, it calibrates positioning.</p>
+                </div>
+              </div>
+            </div>
 
-                        {priorRoles.length > 1 ? (
+            <div className="rounded-2xl border border-gray-800 bg-gray-950 p-6 shadow">
+              <h2 className="text-xl font-semibold">Recent work</h2>
+              <p className="mt-1 text-sm text-gray-400">The last role is the trailer. Make it watchable.</p>
+
+              <div className="mt-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm text-gray-300 mb-1" htmlFor="currentTitle">
+                      Current or last role title
+                    </label>
+                    <input
+                      id="currentTitle"
+                      className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
+                      value={currentTitle}
+                      onChange={(e) => setCurrentTitle(e.target.value)}
+                      placeholder="Role title"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-300 mb-1" htmlFor="currentCompany">
+                      Company
+                    </label>
+                    <input
+                      id="currentCompany"
+                      className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
+                      value={currentCompany}
+                      onChange={(e) => setCurrentCompany(e.target.value)}
+                      placeholder="Company"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                  <div>
+                    <label className="block text-sm text-gray-300 mb-1" htmlFor="currentStart">
+                      Start date
+                    </label>
+                    <input
+                      id="currentStart"
+                      className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
+                      value={currentStartDate}
+                      onChange={(e) => setCurrentStartDate(e.target.value)}
+                      placeholder="YYYY-MM"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-300 mb-1" htmlFor="currentEnd">
+                      End date
+                    </label>
+                    <input
+                      id="currentEnd"
+                      className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white disabled:opacity-50"
+                      value={currentEndDate}
+                      onChange={(e) => setCurrentEndDate(e.target.value)}
+                      placeholder="YYYY-MM"
+                      disabled={currentIsCurrent}
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Disabled while still employed is on.</p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="isCurrent"
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={currentIsCurrent}
+                      onChange={(e) => setCurrentIsCurrent(e.target.checked)}
+                    />
+                    <label htmlFor="isCurrent" className="text-sm text-gray-300">
+                      Still employed
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="block text-sm text-gray-300 mb-1">Impact highlights</label>
+                    <button
+                      type="button"
+                      onClick={addCurrentHighlight}
+                      className="text-xs rounded-md border border-gray-700 px-2 py-1 hover:bg-gray-900"
+                    >
+                      Add highlight
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {currentHighlights.map((h, idx) => (
+                      <div key={idx} className="flex gap-2">
+                        <input
+                          className="flex-1 rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
+                          value={h}
+                          onChange={(e) => updateCurrentHighlight(idx, e.target.value)}
+                          placeholder="Outcome first, then how."
+                        />
+                        {currentHighlights.length > 2 ? (
                           <button
                             type="button"
-                            onClick={() => removePriorRole(idx)}
-                            className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-1 text-xs hover:bg-gray-800"
+                            onClick={() => removeCurrentHighlight(idx)}
+                            className="rounded-md border border-gray-700 px-3 py-2 text-xs hover:bg-gray-900"
                           >
-                            Remove role
+                            Remove
                           </button>
                         ) : null}
                       </div>
+                    ))}
+                  </div>
+                </div>
 
-                      <div className="mt-4 space-y-4">
-                        <Row>
-                          <Field label="Title">
-                            <Input
+                <div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <label className="block text-sm text-gray-300 mb-1">Prior roles</label>
+                      <p className="text-xs text-gray-500">Two to four roles from the last five to ten years.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={addPriorRole}
+                      className="text-xs rounded-md border border-gray-700 px-2 py-1 hover:bg-gray-900"
+                    >
+                      Add role
+                    </button>
+                  </div>
+
+                  <div className="mt-3 space-y-4">
+                    {priorRoles.map((role, idx) => (
+                      <div key={idx} className="rounded-xl border border-gray-800 bg-black p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h3 className="font-semibold">Role {idx + 1}</h3>
+                            <p className="text-xs text-gray-500">Two impact bullets minimum.</p>
+                          </div>
+                          {priorRoles.length > 1 ? (
+                            <button
+                              type="button"
+                              onClick={() => removePriorRole(idx)}
+                              className="text-xs rounded-md border border-gray-700 px-2 py-1 hover:bg-gray-900"
+                            >
+                              Remove role
+                            </button>
+                          ) : null}
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-sm text-gray-300 mb-1">Title</label>
+                            <input
+                              className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
                               value={role.title}
-                              onChange={(e) => updateRole(idx, { title: e.target.value })}
-                              placeholder="Senior Project Manager"
+                              onChange={(e) => updatePriorRoleField(idx, "title", e.target.value)}
+                              placeholder="Role title"
                             />
-                          </Field>
-                        </Row>
+                          </div>
 
-                        <Row>
-                          <Field label="Company">
-                            <Input
+                          <div>
+                            <label className="block text-sm text-gray-300 mb-1">Company</label>
+                            <input
+                              className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
                               value={role.company}
-                              onChange={(e) => updateRole(idx, { company: e.target.value })}
-                              placeholder="Company name"
+                              onChange={(e) => updatePriorRoleField(idx, "company", e.target.value)}
+                              placeholder="Company"
                             />
-                          </Field>
-                        </Row>
+                          </div>
+                        </div>
 
-                        <Row2>
-                          <Field label="Start date">
-                            <Input
+                        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-sm text-gray-300 mb-1">Start date</label>
+                            <input
+                              className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
                               value={role.startDate}
-                              onChange={(e) => updateRole(idx, { startDate: e.target.value })}
-                              placeholder="2019-03"
+                              onChange={(e) => updatePriorRoleField(idx, "startDate", e.target.value)}
+                              placeholder="YYYY-MM"
                             />
-                          </Field>
-                          <Field label="End date">
-                            <Input
-                              value={role.endDate}
-                              onChange={(e) => updateRole(idx, { endDate: e.target.value })}
-                              placeholder="2022-05"
-                            />
-                          </Field>
-                        </Row2>
+                          </div>
 
-                        <div className="space-y-3">
-                          <Label>Impact highlights</Label>
-                          <Textarea
-                            value={role.highlights[0] || ""}
-                            onChange={(e) => updateRoleHighlight(idx, 0, e.target.value)}
-                            placeholder="Highlight 1, measurable outcome, scope, stakeholders."
-                          />
-                          <Textarea
-                            value={role.highlights[1] || ""}
-                            onChange={(e) => updateRoleHighlight(idx, 1, e.target.value)}
-                            placeholder="Highlight 2, delivery, change, risk, systems."
-                          />
+                          <div>
+                            <label className="block text-sm text-gray-300 mb-1">End date</label>
+                            <input
+                              className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
+                              value={role.endDate}
+                              onChange={(e) => updatePriorRoleField(idx, "endDate", e.target.value)}
+                              placeholder="YYYY-MM"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <label className="block text-sm text-gray-300 mb-1">Impact highlights</label>
+                            <button
+                              type="button"
+                              onClick={() => addPriorRoleHighlight(idx)}
+                              className="text-xs rounded-md border border-gray-700 px-2 py-1 hover:bg-gray-900"
+                            >
+                              Add highlight
+                            </button>
+                          </div>
+
+                          <div className="space-y-2">
+                            {role.highlights.map((h, hIdx) => (
+                              <div key={hIdx} className="flex gap-2">
+                                <input
+                                  className="flex-1 rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
+                                  value={h}
+                                  onChange={(e) => updatePriorRoleHighlight(idx, hIdx, e.target.value)}
+                                  placeholder="Measurable outcome, scope, stakeholders."
+                                />
+                                {role.highlights.length > 2 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => removePriorRoleHighlight(idx, hIdx)}
+                                    className="rounded-md border border-gray-700 px-3 py-2 text-xs hover:bg-gray-900"
+                                  >
+                                    Remove
+                                  </button>
+                                ) : null}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
-            </Section>
+            </div>
 
-            <Section title="Credibility" subtitle="Enough to trust you, not enough to bore them.">
-              <Row>
-                <Field label="Education">
-                  <Textarea value={education} onChange={(e) => setEducation(e.target.value)} placeholder="School, degree, year, optional notes." />
-                </Field>
-              </Row>
+            <div className="rounded-2xl border border-gray-800 bg-gray-950 p-6 shadow">
+              <h2 className="text-xl font-semibold">Credibility</h2>
+              <p className="mt-1 text-sm text-gray-400">Enough to trust you, not enough to bore them.</p>
 
-              <Row>
-                <Field label="Certifications">
-                  <Textarea value={certifications} onChange={(e) => setCertifications(e.target.value)} placeholder="PMP, Prosci, SAFe, etc." />
-                </Field>
-              </Row>
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1">Education</label>
+                  <textarea
+                    className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
+                    rows={3}
+                    value={education}
+                    onChange={(e) => setEducation(e.target.value)}
+                    placeholder="School, degree, year, optional notes."
+                  />
+                </div>
 
-              <Row>
-                <Field label="Skills and platforms">
-                  <Textarea
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1">Certifications</label>
+                  <textarea
+                    className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
+                    rows={2}
+                    value={certifications}
+                    onChange={(e) => setCertifications(e.target.value)}
+                    placeholder="PMP, SAFe, Prosci, etc."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1">Skills and platforms</label>
+                  <textarea
+                    className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
+                    rows={3}
                     value={skillsAndPlatforms}
                     onChange={(e) => setSkillsAndPlatforms(e.target.value)}
-                    placeholder="Smartsheet, Power BI, Jira, ServiceNow, SAP, SQL, APIs, governance, migrations."
+                    placeholder="Tools, platforms, domains, systems."
+                    required
                   />
-                </Field>
-              </Row>
-            </Section>
-
-            <Section title="Optional LTV" subtitle="If you have a target job, we can tune the story to it.">
-              <Row>
-                <Field label="Target job URL">
-                  <Input value={targetJobUrl} onChange={(e) => setTargetJobUrl(e.target.value)} placeholder="https://company.com/jobs/..." />
-                </Field>
-              </Row>
-            </Section>
-
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className={cn(
-                  "mt-2 inline-flex w-full items-center justify-center rounded-lg px-6 py-3 text-sm font-medium transition",
-                  loading ? "bg-gray-800 text-gray-300" : "bg-white text-black hover:bg-gray-200"
-                )}
-              >
-                {loading ? "Generating..." : "Generate Resume Draft"}
-              </button>
-
-              {error ? (
-                <div className="mt-3 rounded-lg border border-red-900/40 bg-red-950/40 p-3 text-sm text-red-200">
-                  {error}
                 </div>
-              ) : null}
-
-              <details className="mt-4 rounded-lg border border-gray-800 bg-gray-950 p-3">
-                <summary className="cursor-pointer text-xs text-gray-400">
-                  Debug payload JSON
-                </summary>
-                <pre className="mt-3 max-h-64 overflow-auto text-xs text-gray-200">
-                  {JSON.stringify(payload, null, 2)}
-                </pre>
-              </details>
-            </div>
-          </form>
-
-          <aside className="rounded-2xl border border-gray-800 bg-gray-950 p-5">
-            <div className="mb-3">
-              <h2 className="text-sm font-semibold">Resume Readiness</h2>
-              <p className="mt-1 text-xs text-gray-400">
-                Streaming output from the agent.
-              </p>
+              </div>
             </div>
 
-            <div className="min-h-[520px] whitespace-pre-wrap rounded-xl border border-gray-800 bg-black p-4 text-sm text-gray-100">
-              {streamedText ? streamedText : "Submit the intake to generate a structured first draft."}
+            <div className="rounded-2xl border border-gray-800 bg-gray-950 p-6 shadow">
+              <h2 className="text-xl font-semibold">Optional LTV</h2>
+              <p className="mt-1 text-sm text-gray-400">If you have a target job, we can tune the story to it.</p>
+
+              <div className="mt-4">
+                <label className="block text-sm text-gray-300 mb-1">Target job URL</label>
+                <input
+                  className="w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-white"
+                  value={targetJobUrl}
+                  onChange={(e) => setTargetJobUrl(e.target.value)}
+                  placeholder="https://company.com/jobs/..."
+                  inputMode="url"
+                  autoComplete="url"
+                />
+              </div>
             </div>
-          </aside>
-        </div>
-      </div>
-    </main>
-  );
-}
-
-function Section(props: { title: string; subtitle?: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-2xl border border-gray-800 bg-gray-950 p-5">
-      <div className="mb-5">
-        <h2 className="text-lg font-semibold">{props.title}</h2>
-        {props.subtitle ? <p className="mt-1 text-sm text-gray-400">{props.subtitle}</p> : null}
-      </div>
-      {props.children}
-    </section>
-  );
-}
-
-function Row(props: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-1 gap-4">{props.children}</div>;
-}
-
-function Row2(props: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-1 gap-4 md:grid-cols-2">{props.children}</div>;
-}
-
-function Row3(props: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-1 gap-4 md:grid-cols-3">{props.children}</div>;
-}
-
-function Field(props: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <Label>{props.label}</Label>
-      {props.hint ? <div className="mt-1 text-xs text-gray-400">{props.hint}</div> : null}
-      <div className="mt-2">{props.children}</div>
-    </div>
-  );
-}
-
-function Label(props: { children: React.ReactNode }) {
-  return <div className="text-xs font-medium text-gray-300">{props.children}</div>;
-}
-
-function Input(
-  props: React.InputHTMLAttributes<HTMLInputElement> & { className?: string }
-) {
-  return (
-    <input
-      {...props}
-      className={cn(
-        "h-10 w-full rounded-md border border-gray-800 bg-black px-3 text-sm text-white outline-none",
-        "focus:border-gray-600",
-        props.disabled && "bg-gray-900 text-gray-400",
-        props.className
-      )}
-    />
-  );
-}
-
-function Textarea(
-  props: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { className?: string }
-) {
-  return (
-    <textarea
-      {...props}
-      className={cn(
-        "min-h-[44px] w-full rounded-md border border-gray-800 bg-black px-3 py-2 text-sm text-white outline-none",
-        "focus:border-gray-600",
-        props.className
-      )}
-    />
-  );
-}
-
-function Toggle(props: { checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      onClick={() => props.onChange(!props.checked)}
-      className={cn(
-        "h-10 w-full rounded-md border px-3 text-sm transition",
-        props.checked ? "border-white bg-white text-black" : "border-gray-800 bg-black text-white hover:bg-gray-950"
-      )}
-      aria-pressed={props.checked}
-    >
-      {props.checked ? "Yes" : "No"}
-    </button>
-  );
-}
