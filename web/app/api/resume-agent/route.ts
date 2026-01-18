@@ -5,6 +5,7 @@ export const runtime = "nodejs";
 
 type IntakePayload = {
   name: string;
+  linkedinUrl?: string;
   location: { city: string; state: string; zip: string };
   desiredTitle: string;
   desiredSalaryRange: string;
@@ -49,8 +50,11 @@ function looksLikeIntake(obj: any): boolean {
 }
 
 function normalizeIntake(raw: any): IntakePayload {
+  const linkedin = String(raw?.linkedinUrl || "").trim();
+
   return {
     name: String(raw?.name || "").trim(),
+    linkedinUrl: linkedin ? linkedin : undefined,
     location: {
       city: String(raw?.location?.city || "").trim(),
       state: String(raw?.location?.state || "").trim(),
@@ -79,7 +83,14 @@ function normalizeIntake(raw: any): IntakePayload {
               ? r.highlights.map((x: any) => String(x || "").trim()).filter(Boolean)
               : [],
           }))
-          .filter((r: any) => r.title || r.company || r.startDate || r.endDate || (r.highlights?.length ?? 0) > 0)
+          .filter(
+            (r: any) =>
+              r.title ||
+              r.company ||
+              r.startDate ||
+              r.endDate ||
+              (r.highlights?.length ?? 0) > 0
+          )
       : [],
     education: String(raw?.education || "").trim(),
     certifications: String(raw?.certifications || "").trim(),
@@ -105,6 +116,7 @@ function compactIntake(intake: IntakePayload): string {
   lines.push(
     `Location: ${[intake.location.city, intake.location.state, intake.location.zip].filter(Boolean).join(", ") || "Unknown"}`
   );
+  if (intake.linkedinUrl) lines.push(`LinkedIn: ${intake.linkedinUrl}`);
 
   lines.push("");
   lines.push("Current role:");
@@ -125,7 +137,9 @@ function compactIntake(intake: IntakePayload): string {
     lines.push("");
     lines.push("Prior roles:");
     intake.priorRoles.slice(0, 6).forEach((r, idx) => {
-      lines.push(`${idx + 1}. ${r.title || "Unknown"} at ${r.company || "Unknown"} (${r.startDate || "?"} to ${r.endDate || "?"})`);
+      lines.push(
+        `${idx + 1}. ${r.title || "Unknown"} at ${r.company || "Unknown"} (${r.startDate || "?"} to ${r.endDate || "?"})`
+      );
       const hs = (r.highlights || []).filter(Boolean);
       if (hs.length) hs.slice(0, 4).forEach((h) => lines.push(`   - ${h}`));
       else lines.push("   - Highlights not provided");
