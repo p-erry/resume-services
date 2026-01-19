@@ -16,13 +16,17 @@ export default function Home() {
           product, not a timeline.
         </p>
 
-        <div className="flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
           <Link
             href="/intake"
             className="inline-flex items-center justify-center rounded-lg bg-white px-6 py-3 text-sm font-medium text-black hover:bg-gray-200 transition"
           >
             Start intake
           </Link>
+
+          <p className="text-xs text-gray-400">
+            We’ll make it right.
+          </p>
         </div>
 
         <p className="mt-8 text-xs text-gray-500">
