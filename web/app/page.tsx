@@ -32,6 +32,10 @@ export default function Home() {
         <p className="mt-8 text-xs text-gray-500">
           The intake generates a first draft, then we iterate into a final version.
         </p>
+
+        <p className="mt-2 text-xs text-gray-600">
+          Built on Vercel.
+        </p>
       </section>
     </main>
   );
